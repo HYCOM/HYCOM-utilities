@@ -3,6 +3,75 @@ from hycom.info import read_field_names
 
 NAN_TH = 2**99  # Nan threshold
 
+def subset_hycom_field(input_file: str, output_file:str, fields: list, layers=[]):
+    """
+    This function will create a new set of .a and .b files, with a subset number of fields and layers.
+    input_file: str
+        Complete path to the .a or .b hycom output file. It can also be the name of the file without the extension
+    output_file: str
+        Name of the file to use as output.
+    fields: list
+        List of strings with the fields names to keep.
+    layers: list
+        List of integers that represent the z-index of each of the layers to keep. If empty, all layers are kept.
+    """
+    # Selecting the proper name
+    if input_file.endswith('.a') or input_file.endswith('.b'):
+        input_file = input_file[:-2]
+    if output_file.endswith('.a') or output_file.endswith('.b'):
+        output_file = output_file[:-2]
+
+    a_input_file = input_file+'.a'
+    b_input_file = input_file+'.b'
+    b_file = open(b_input_file, 'r')
+
+    new_b_input_file = output_file+'.b'
+
+    # Validate that the field names requested are available in the hycom file
+    all_fields = read_field_names(b_input_file)
+    if len(fields) == 0:
+        fields = all_fields
+        # print(F"Reading all the fields in the file: {fields}")
+    if not(np.all([field in all_fields for field in fields])):
+        print(F"Warning!!!!! Fields {[field for field in fields if not(field in all_fields)]} are not"
+              F" in the hycom file {input_file}, removing them from the list.")
+        fields = [field for field in fields if field in all_fields ]
+
+    # Reading the header file (first 4 lines, just general info)
+    b_file_lines = b_file.readlines()
+
+    lon_size = int(b_file_lines[7].strip().split()[0])
+    lat_size = int(b_file_lines[8].strip().split()[0])
+    layer_size = lon_size*lat_size
+    # size of each layer (it seems all the layers have the same size)
+    npad = 4096-np.mod(layer_size, 4096)
+
+    # Data of the new bfile
+    new_b_file_lines = b_file_lines[:10]
+
+    # Opening input and output files
+    a_file = open(a_input_file, 'rb')
+    a_output_file = open(F"{output_file}.a", 'wb')
+
+    # Looking for the starting locations for each layer and each field
+    field_loc = {field: [] for field in fields}
+    for line_idx, cur_line in enumerate(b_file_lines[9:]):
+        field = cur_line.split()[0].strip()
+        if field in field_loc:
+            if np.any(len(field_loc[field]) == np.array(layers)):
+                new_b_file_lines.append(cur_line)
+                offset = (line_idx-1) * (layer_size + npad) * 4
+                a_file.seek(offset)
+                a_output_file.write(a_file.read((layer_size + npad) * 4))
+            field_loc[field].append(line_idx)
+
+    file_output_b = open(F"{output_file}.b","w")
+    file_output_b.write("".join(new_b_file_lines))
+
+    # Closing both files
+    a_file.close()
+    b_file.close()
+    a_output_file.close()
 
 def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=True):
     """
