@@ -25,7 +25,7 @@ read_hycom_fields(file_name, fields)
 from hycom.io import subset_hycom_field
 subset_hycom_field(input_file, output_file, fields, layers)
 ```
-**Read Arakawa-C grid coordinates
+**Read Arakawa-C grid coordinates**
 
 ```python
 from hycom.io import subset_hycom_field
