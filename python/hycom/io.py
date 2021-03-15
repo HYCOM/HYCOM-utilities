@@ -79,8 +79,6 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
     Reads hycom files (.a and .b) and returns the desired fields in a dictionary.
         file_name: str
             Complete path to the .a or .b hycom output file. It can also be the name of the file without the extension
-        fields: list
-            List of strings with the fields names to read. If empty, the function reads all the fields
         layers: list
             List of integers that represent the z-index of the layers to read. If empty, all the layers will be read.
         replace_to_nan: boolean
@@ -172,10 +170,13 @@ def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbos
     Reads files latitude and longitude coordinates from the  'regional.grid' file
         file_name: str
             Complete path to the "regional.grid" file
+        fields: list
+            List of strings with the fields names to read. If empty, the function reads all the fields
+        replace_to_nan: boolean
+            Indicates if the nan values should be replaced with numpy nan
         verbose: boolean
             If True, it prints intermediate information of the process
     """
-
     if file_name.endswith('.a') or file_name.endswith('.b'):
         file_name = file_name[:-2]
 
@@ -224,4 +225,3 @@ def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbos
     b_file.close()
 
     return np_fields
-
