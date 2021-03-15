@@ -73,7 +73,8 @@ def subset_hycom_field(input_file: str, output_file:str, fields: list, layers=[]
     b_file.close()
     a_output_file.close()
 
-def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=True):
+
+def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=True, verbose=False):
     """
     Reads hycom files (.a and .b) and returns the desired fields in a dictionary.
         file_name: str
@@ -84,6 +85,8 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
             List of integers that represent the z-index of the layers to read. If empty, all the layers will be read.
         replace_to_nan: boolean
             Indicates if the nan values should be replaced with numpy nan
+        verbose: boolean
+            If True, it prints intermediate information of the process
     """
     # Selecting the proper name
     if file_name.endswith('.a') or file_name.endswith('.b'):
@@ -114,10 +117,6 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
     # size of each layer (it seems all the layers have the same size)
     npad = 4096-np.mod(layer_size, 4096)
 
-    # Printing basic information
-    print(F"Hycom version: {hycom_ver}, Experiment: {exp_num}")
-    for cur_line in range(3):
-        print(b_file_lines[cur_line].strip())
 
     # Looking for the starting locations for each layer and each field
     field_loc = {field: [] for field in fields}
@@ -128,7 +127,6 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
 
     # Counting the number of layers for each field.
     num_layers = {field: len(field_loc[field]) for field in fields}
-    print(F"Dims lon: {lon_size}, lat: {lat_size}")
 
     # Read layers for each field
     a_file = open(a_file_name, 'rb')
@@ -142,8 +140,14 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
     # Create the dictionary that will contain the np arrays with the fields information
     np_fields = {field: np.zeros((len(layers_per_field[field]), lat_size, lon_size)) for field in fields}
 
-    for field in fields:
-        print(F"\tReading layers {layers_per_field[field]} for field {field}. Total layers: {num_layers[field]}")
+    # Printing information
+    if verbose:
+        print(F"Hycom version: {hycom_ver}, Experiment: {exp_num}")
+        for cur_line in range(3):
+            print(b_file_lines[cur_line].strip())
+        print(F"Dims lon: {lon_size}, lat: {lat_size}")
+        for field in fields:
+            print(F"\tReading layers {layers_per_field[field]} for field {field}. Total layers: {num_layers[field]}")
 
     # For each field read the proper section for each layer, from the binary file
     for field in fields:
@@ -154,6 +158,66 @@ def read_hycom_fields(file_name: str, fields: list, layers=[], replace_to_nan=Tr
             if replace_to_nan:
                 cur_layer_data[cur_layer_data > NAN_TH] = np.nan
             np_fields[field][cur_layer_idx, :, :] = np.reshape(cur_layer_data, (lat_size, lon_size))
+
+    # Closing both files
+    a_file.close()
+    b_file.close()
+
+    return np_fields
+
+
+def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbose=False):
+    """
+    The definition of the "regional.grid" files is defined in page 9 and 10 of the Hycom User's Guide
+    Reads files latitude and longitude coordinates from the  'regional.grid' file
+        file_name: str
+            Complete path to the "regional.grid" file
+        verbose: boolean
+            If True, it prints intermediate information of the process
+    """
+
+    if file_name.endswith('.a') or file_name.endswith('.b'):
+        file_name = file_name[:-2]
+
+    a_file_name = file_name+'.a'
+    b_file_name = file_name+'.b'
+    b_file = open(b_file_name, 'r')
+
+    # Read dimensions
+    b_file_lines = b_file.readlines()
+
+    lon_size = int(b_file_lines[0].strip().split()[0])
+    lat_size = int(b_file_lines[1].strip().split()[0])
+    layer_size = lat_size*lon_size
+    # size of each layer (it seems all the layers have the same size)
+    npad = 4096-np.mod(layer_size, 4096)
+
+    # Looking for the starting locations for each layer and each field
+    field_loc = {field: [] for field in fields}
+    for line_idx, cur_line in enumerate(b_file_lines[3:]):
+        field = cur_line.split()[0].strip().replace(":","")
+        if field in field_loc:
+            field_loc[field].append(line_idx)
+
+    a_file = open(a_file_name, 'rb') # Open the binary a file
+
+    # Create the dictionary that will contain the np arrays with the fields information
+    np_fields = {field: np.zeros((lat_size, lon_size)) for field in fields}
+
+    # Printing information
+    if verbose:
+        print(F"Dims lon: {lon_size}, lat: {lat_size}")
+        for field in fields:
+            print(F"\tReading  field {field}. ")
+
+    # For each field read the proper section for each layer, from the binary file
+    for field in fields:
+        offset = field_loc[field][0] * (layer_size+npad)*4
+        a_file.seek(offset)
+        cur_layer_data = np.fromfile(file_name+'.a', dtype='>f', count=layer_size, offset=offset)
+        if replace_to_nan:
+            cur_layer_data[cur_layer_data > NAN_TH] = np.nan
+        np_fields[field][:, :] = np.reshape(cur_layer_data, (lat_size, lon_size))
 
     # Closing both files
     a_file.close()
