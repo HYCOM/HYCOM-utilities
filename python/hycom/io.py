@@ -196,8 +196,8 @@ def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbos
     # Looking for the starting locations for each layer and each field
     field_loc = {field: [] for field in fields}
     for line_idx, cur_line in enumerate(b_file_lines[3:]):
-        field = cur_line.split()[0].strip().replace(":","")
-        if field in field_loc:
+        field = cur_line.split()[0].strip()
+        if (field in field_loc) or (field.replace(":","") in field_loc):
             field_loc[field].append(line_idx)
 
     a_file = open(a_file_name, 'rb') # Open the binary a file

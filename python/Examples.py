@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from os.path import join, exists
 import os
 
-
 input_folder = join('..','test_data')
 output_folder = 'output'
 
