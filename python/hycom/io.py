@@ -193,11 +193,13 @@ def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbos
     # size of each layer (it seems all the layers have the same size)
     npad = 4096-np.mod(layer_size, 4096)
 
+
+    fields = [field.replace(":","") for field in fields]
     # Looking for the starting locations for each layer and each field
     field_loc = {field: [] for field in fields}
     for line_idx, cur_line in enumerate(b_file_lines[3:]):
-        field = cur_line.split()[0].strip()
-        if (field in field_loc) or (field.replace(":","") in field_loc):
+        field = cur_line.split()[0].strip().replace(":","")
+        if field in field_loc:
             field_loc[field].append(line_idx)
 
     a_file = open(a_file_name, 'rb') # Open the binary a file
@@ -225,3 +227,6 @@ def read_hycom_coords(file_name: str, fields: list, replace_to_nan=True,  verbos
     b_file.close()
 
     return np_fields
+
+
+# def hycom_to_xarray(file_name, coord_file, fields, layers):

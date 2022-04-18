@@ -60,15 +60,16 @@ def readPlotHycomCoords():
 
     # These are all the coordinates in the file
     # The definition of the "regional.grid" files is defined in page 9 and 10 of the Hycom User's Guide
-    fields = [ 'plon','plat','qlon','qlat','ulon','ulat','vlon','vlat']
+    fields = ['plon','plat','qlon','qlat','ulon','ulat','vlon','vlat']
 
     hycom_fields = read_hycom_coords(input_file, fields)
     # Making plot of the fields
     for idx, field in enumerate(fields):
-        plt.imshow(np.flip(hycom_fields[field], axis=0))
+        im = plt.imshow(np.flip(hycom_fields[field], axis=0))
         plt.title(F"{field}")
         if not (exists(output_folder)):
             os.makedirs(output_folder)
+        plt.colorbar(im, shrink=.7)
         plt.savefig(join(output_folder, F"Coord_{field}_{idx}.png"))
         plt.show()
 
