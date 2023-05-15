@@ -1,4 +1,6 @@
 %%%%%%%%%%%%% Create .txt files with cmocean RGB for fortran %%%%%%%%%%%%%%
+% Example of how to use it: cmocean_fortran('curl') or
+% cmocean_fortran('-curl')
 
 function cmocean_fortran(color_cmocean)
 
@@ -11,6 +13,6 @@ else
     name_file = [color_cmocean '.txt'];
 end
 
-writematrix(RGB_fortran,name_file,'Delimiter',' ');
-
+% writematrix(RGB_fortran,name_file,'Delimiter',' ');
+writematrix(RGB_fortran,name_file,'Delimiter','tab')
 end
